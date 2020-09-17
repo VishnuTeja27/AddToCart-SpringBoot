@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 //import org.springframework.web.bind.annotation.RequestParam;
 //import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.model.Item;
 import com.example.demo.model.User;
@@ -56,13 +57,16 @@ public class UserController {
 	public String deleteUser(@PathVariable Long id)
 	{
 			Optional<User> deluser=repo.findById(id);
-			if(deluser.isEmpty()) return "User not Found";
+			if(deluser.isEmpty()) {
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"User Not Found");
+			}
+
 			
-			for(Item delitem:deluser.get().getC_items())
+			for(Item delitem:deluser.get().getCartItems())
 			{
 				delitem.getUsers().remove(deluser.get());
 			}
-			deluser.get().getC_items().clear();
+			deluser.get().getCartItems().clear();
 			repo.delete(deluser.get());
 			logger.info("User is deleted");
 
@@ -82,8 +86,16 @@ public class UserController {
 		logger.info("Specific User is requested");
 		
 		Optional<User> result=repo.findById(id);
-		if(result.isEmpty())return new ResponseEntity<User>(HttpStatus.NOT_FOUND);
-		return new ResponseEntity<User>(result.get(),HttpStatus.OK);
+		
+		try {
+			return new ResponseEntity<User>(result.get(),HttpStatus.OK);
+		}
+		
+		catch(Exception e)
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"User Not Found",e);
+		}
+
 	}
 	
 	
@@ -100,16 +112,21 @@ public class UserController {
 		Optional<User> user=repo.findById(id);
 		Optional<Item> item= irepo.findById(iid);
 		
-		if(item.isEmpty())return "No Item found";
+		if(user.isEmpty())
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"User Not Found");
+		}
+		if(item.isEmpty())
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Item Not Found");
+		}
 		
-		if(user.isPresent()) {
 			User curr_user =user.get();
-			curr_user.getC_items().add(item.get());
+			curr_user.getCartItems().add(item.get());
 			item.get().getUsers().add(curr_user);
 			repo.save(curr_user);
 			return "Item added to Cart";
-		}
-		return "No user Found";
+		
 	}
 	
 	@PutMapping("/User/delete/{id}/{iid}")
@@ -118,12 +135,21 @@ public class UserController {
 		Optional<User> user=repo.findById(id);
 		Optional<Item> item= irepo.findById(iid);
 		
-		if(user.isEmpty())return "No User Found";	
-		if(item.isEmpty())return "No Item found";
+		if(user.isEmpty())
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"User Not Found");
+		}
+		if(item.isEmpty())
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Item Not Found");
+		}
 		
 		User curr_user =user.get();
-		if(!(curr_user.getC_items().contains(item.get())))return "Item Not Found in Cart";
-		curr_user.getC_items().remove(item.get());
+		if(!(curr_user.getCartItems().contains(item.get())))
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Item Not Available in Cart");
+		}
+		curr_user.getCartItems().remove(item.get());
 		item.get().getUsers().remove(curr_user);
 		repo.save(curr_user);
 		return "Item removed from Cart";
@@ -131,20 +157,17 @@ public class UserController {
 	
 
 	@GetMapping("/User/{id}/items")
-	public List<Item> viewCart(@PathVariable("id") Long id) 
+	public ResponseEntity<List<Item>> viewCart(@PathVariable("id") Long id) 
 	{
 		Optional<User> user= repo.findById(id);
-		if(user.isEmpty())return null;
+		if(user.isEmpty())
+		{
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"User Not Found");
+		}
 		
-//		SimpleFilterProvider filterProvider = new SimpleFilterProvider();
-//	    filterProvider.addFilter("empFilter",SimpleBeanPropertyFilter.filterOutAllExcept("iid", "iname","category"));
-//	    ObjectMapper om = new ObjectMapper();
-//	    om.setFilterProvider(filterProvider);
-//	    
-//	    String result =om.writeValueAsString(user.get().getC_items());
-//		String result = user.get().getC_items().toString();
-		List<Item> result= user.get().getC_items();
-		return result;
+		List<Item> result= user.get().getCartItems();
+
+		return new ResponseEntity<List<Item>>(result,HttpStatus.OK);
 	}
 
 	

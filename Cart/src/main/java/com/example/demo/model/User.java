@@ -30,14 +30,14 @@ public class User {
 //	@JsonBackReference
 	@JsonIgnore
 	@ManyToMany(mappedBy="users",targetEntity = Item.class,cascade = {CascadeType.PERSIST,CascadeType.MERGE})
-	private List<Item> c_items= new ArrayList<>(); 
+	private List<Item> cartItems= new ArrayList<>(); 
 	
-	public List<Item> getC_items() {
-		return c_items;
+	public List<Item> getCartItems() {
+		return cartItems;
 	}
 
-	public void setC_items(List<Item> c_items) {
-		this.c_items = c_items;
+	public void setCartItems(List<Item> c_items) {
+		this.cartItems = c_items;
 	}
 
 	public Long getId() {
